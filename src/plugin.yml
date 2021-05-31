@@ -1,0 +1,9 @@
+name: BetterBuckets
+version: 1.0
+author: RocketZ1
+main: me.RocketZ1.BetterBuckets.Main
+description: Buckets that can hold more liquid
+api-version: 1.16
+commands:
+  betterbuckets:
+    description: gives player the better bucket
