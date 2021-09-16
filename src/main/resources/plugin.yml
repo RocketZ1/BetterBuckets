@@ -1,0 +1,27 @@
+name: BetterBuckets
+version: 1.0
+author: RocketZ1
+main: me.RocketZ1.BetterBuckets.Main
+description: A plugin that creates buckets that can hold more liquid
+api-version: 1.17
+prefix: BetterBuckets
+softdepend:
+  - WorldGuard
+  - WorldEdit
+  - GriefPrevention
+commands:
+  betterbuckets:
+    description: Gives player the better bucket with the values specified in the command.
+    usage: /<command> (player) (bucket_type) (bucket_amount) (bucket_capacity)
+    permission: betterbuckets.give
+  betterbucketsreload:
+    description: Reloads the config.
+    usage: /<command>
+    permission: betterbuckets.reload
+permissions:
+  betterbuckets.give:
+    description: Admin command to give players the BetterBucket
+    default: op
+  betterbuckets.reload:
+    description: Admin command that reloads the plugin config
+    default: op

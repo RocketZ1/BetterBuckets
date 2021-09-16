@@ -1,3 +1,19 @@
+/*
+   Copyright 2021 RocketZ1
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+	   http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
+
 package me.RocketZ1.BetterBuckets;
 
 import com.sk89q.worldedit.WorldEdit;
@@ -13,21 +29,16 @@ import com.sk89q.worldguard.protection.regions.RegionContainer;
 import com.sk89q.worldguard.protection.regions.RegionQuery;
 import me.RocketZ1.BetterBuckets.Commands.BetterBucket;
 import me.RocketZ1.BetterBuckets.Commands.BetterBucketTab;
+import me.RocketZ1.BetterBuckets.Commands.ReloadConfigCmd;
 import me.RocketZ1.BetterBuckets.Events.*;
 import me.RocketZ1.BetterBuckets.Files.ConfigManager;
+import me.ryanhamshire.GriefPrevention.Claim;
+import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.util.ArrayList;
 
 public class Main extends JavaPlugin {
 
@@ -36,14 +47,19 @@ public class Main extends JavaPlugin {
     public WorldEditPlugin worldEditPlugin;
     public WorldGuard worldGuard;
     public WorldEdit worldEdit;
+    public GriefPrevention griefPrevention;
+
+    public String bucketName = "null";
 
     @Override
     public void onEnable(){
         worldGuardPlugin = getWorldGuardPlugin();
         worldEditPlugin = getWorldEditPlugin();
+        griefPrevention = getGriefPreventionPlugin();
         PluginManager pm = getServer().getPluginManager();
         this.config = new ConfigManager(this);
         new BetterBucket(this);
+        new ReloadConfigCmd(this);
         new BetterBucketTab(this);
         pm.registerEvents(new BucketEvent(this), this);
         pm.registerEvents(new ToggleMode(this), this);
@@ -51,7 +67,14 @@ public class Main extends JavaPlugin {
         pm.registerEvents(new FurnaceEvent(this), this);
         pm.registerEvents(new CauldronEvent(this), this);
         pm.registerEvents(new DisableBucketFish(this), this);
-        pm.registerEvents(new DisableMilking(this), this);
+        pm.registerEvents(new MilkBucket(this), this);
+        setupConfigFiles();
+    }
+
+    public void setupConfigFiles(){
+        if(config.getConfig().contains("bucket_name")){
+            bucketName = config.getConfig().getString("bucket_name");
+        }
     }
 
     public boolean checkRegion(Player p, Location loc) {
@@ -64,12 +87,27 @@ public class Main extends JavaPlugin {
         ApplicableRegionSet set = query.getApplicableRegions(loc);
         for(ProtectedRegion region : set){
             if(region.contains(loc.toVector().toBlockPoint())){
-                if(region.getMembers().contains(localPlayer.getUniqueId())) return false;
                 if(region.getOwners().contains(localPlayer.getUniqueId())) return false;
+                if(region.getMembers().contains(localPlayer.getUniqueId())) return false;
                 return true;
             }
         }
         return false;
+    }
+
+    public boolean checkClaimAccess(Player p, org.bukkit.Location loc){
+        if(griefPrevention.dataStore.getPlayerData(p.getUniqueId()).ignoreClaims) return true;
+        for(Claim claim : griefPrevention.dataStore.getClaims()){
+            if(claim.contains(loc, true, true)){
+                String msg = claim.allowAccess(p);
+                if(msg == null){
+                    return true;
+                }
+                p.sendMessage(format("&c")+msg);
+                return false;
+            }
+        }
+        return true;
     }
 
     public WorldGuardPlugin getWorldGuardPlugin() {
@@ -105,48 +143,13 @@ public class Main extends JavaPlugin {
         return worldEdit;
     }
 
-    public ItemStack BigBucket(String bucketType, int amount, int capacity){
-        ItemStack bucket = new ItemStack(Material.BUCKET);
-        ItemMeta bucket_meta = bucket.getItemMeta();
-        PersistentDataContainer item = bucket_meta.getPersistentDataContainer();
-        NamespacedKey LiquidAmtKey = new NamespacedKey(Main.getPlugin(Main.class), "better-buckets-filled");
-        NamespacedKey BucketCapacityKey = new NamespacedKey(Main.getPlugin(Main.class), "better-buckets-capacity");
-        NamespacedKey BucketTypeKey = new NamespacedKey(Main.getPlugin(Main.class), "better-buckets-type");
-        NamespacedKey BetterBucketKey = new NamespacedKey(Main.getPlugin(Main.class), "better-buckets");
-
-        item.set(LiquidAmtKey, PersistentDataType.INTEGER, amount);
-        item.set(BucketCapacityKey, PersistentDataType.INTEGER, capacity);
-        item.set(BucketTypeKey, PersistentDataType.STRING, bucketType);
-        item.set(BetterBucketKey, PersistentDataType.STRING, "Better Buckets");
-        if(bucketType.equalsIgnoreCase("Empty")) {
-            bucket_meta.setDisplayName(format("&7Big Bucket"));
-            ArrayList<String> item_lore = new ArrayList<>();
-            item_lore.add("");
-            item_lore.add(format("&7Filled: " + item.get(LiquidAmtKey, PersistentDataType.INTEGER)));
-            item_lore.add(format("&7Capacity: " + item.get(BucketCapacityKey, PersistentDataType.INTEGER)));
-            item_lore.add(format("&7Type: " + item.get(BucketTypeKey, PersistentDataType.STRING)));
-            bucket_meta.setLore(item_lore);
-            bucket.setItemMeta(bucket_meta);
-        }else if(bucketType.equalsIgnoreCase("Lava")) {
-            bucket_meta.setDisplayName(format("&6Big Bucket"));
-            ArrayList<String> item_lore = new ArrayList<>();
-            item_lore.add("");
-            item_lore.add(format("&6Filled: " + item.get(LiquidAmtKey, PersistentDataType.INTEGER)));
-            item_lore.add(format("&6Capacity: " + item.get(BucketCapacityKey, PersistentDataType.INTEGER)));
-            item_lore.add(format("&6Type: " + item.get(BucketTypeKey, PersistentDataType.STRING)));
-            bucket_meta.setLore(item_lore);
-            bucket.setItemMeta(bucket_meta);
-        }else if(bucketType.equalsIgnoreCase("Water")) {
-            bucket_meta.setDisplayName(format("&9Big Bucket"));
-            ArrayList<String> item_lore = new ArrayList<>();
-            item_lore.add("");
-            item_lore.add(format("&9Filled: " + item.get(LiquidAmtKey, PersistentDataType.INTEGER)));
-            item_lore.add(format("&9Capacity: " + item.get(BucketCapacityKey, PersistentDataType.INTEGER)));
-            item_lore.add(format("&9Type: " + item.get(BucketTypeKey, PersistentDataType.STRING)));
-            bucket_meta.setLore(item_lore);
-            bucket.setItemMeta(bucket_meta);
+    private GriefPrevention getGriefPreventionPlugin(){
+        Plugin plugin = this.getServer().getPluginManager().getPlugin("GriefPrevention");
+        // May not be loaded
+        if(plugin == null || !(plugin instanceof GriefPrevention)){
+            return null;
         }
-        return bucket;
+        return (GriefPrevention) plugin;
     }
 
     public String format(String msg){

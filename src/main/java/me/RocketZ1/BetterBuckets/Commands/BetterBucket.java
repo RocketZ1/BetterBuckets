@@ -1,6 +1,23 @@
+/*
+   Copyright 2021 RocketZ1
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+	   http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+*/
 package me.RocketZ1.BetterBuckets.Commands;
 
 import me.RocketZ1.BetterBuckets.Main;
+import me.RocketZ1.BetterBuckets.Other.BucketType;
+import me.RocketZ1.BetterBuckets.Other.BucketUpdater;
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -23,8 +40,6 @@ public class BetterBucket implements CommandExecutor {
             sender.sendMessage(plugin.format("&cYou do not have permission to execute this command!"));
             return true;
         }
-
-        // /betterbuckets (User)
         if (1 > args.length) {
             sender.sendMessage(plugin.format("&cInvalid usage, correct usage: /betterbuckets (user) (type) (liquid amount) (bucket capacity)"));
             return true;
@@ -44,19 +59,14 @@ public class BetterBucket implements CommandExecutor {
             sender.sendMessage(plugin.format("&cPlayer \"" + args[0] + "\" is not online!"));
             return true;
         }
-        String bucketType = "";
-        boolean bucketTypeFound = false;
-        if(args[1].equalsIgnoreCase("Empty")){
-            bucketType = "Empty";
-            bucketTypeFound = true;
-        }else if(args[1].equalsIgnoreCase("Lava")){
-            bucketType = "Lava";
-            bucketTypeFound = true;
-        }else if(args[1].equalsIgnoreCase("Water")){
-            bucketType = "Water";
-            bucketTypeFound = true;
+        BucketType bucketType = null;
+        for(BucketType type : BucketType.values()){
+            if(args[1].equalsIgnoreCase(type.toString())){
+                bucketType = type;
+                break;
+            }
         }
-        if(!bucketTypeFound){
+        if(bucketType == null){
             sender.sendMessage(plugin.format("&cInvalid bucket type!"));
             return true;
         }
@@ -69,19 +79,13 @@ public class BetterBucket implements CommandExecutor {
             sender.sendMessage(plugin.format("&cPlease input whole numbers for the liquid amount and bucket capacity!"));
             return true;
         }
-        if(bucketType.equalsIgnoreCase("Empty")) {
+        if(bucketType == BucketType.EMPTY) {
             if (amountInBucket != 0) {
                 sender.sendMessage(plugin.format("&cCannot put liquid in an empty bucket!"));
                 return true;
             }
         }
-        if(bucketType.equalsIgnoreCase("Lava")) {
-            if (amountInBucket == 0) {
-                sender.sendMessage(plugin.format("&cCannot put no liquid in a liquid bucket!"));
-                return true;
-            }
-        }
-        if(bucketType.equalsIgnoreCase("Water")){
+        if(bucketType != BucketType.EMPTY) {
             if (amountInBucket == 0) {
                 sender.sendMessage(plugin.format("&cCannot put no liquid in a liquid bucket!"));
                 return true;
@@ -91,20 +95,13 @@ public class BetterBucket implements CommandExecutor {
             sender.sendMessage(plugin.format("&cCannot put more liquid in the bucket than the bucket capacity!"));
             return true;
         }
-
-        int slotNum = 0;
-        boolean found = false;
-        for (ItemStack slots : p.getInventory()) {
-            slotNum++;
-            if (slots != null) continue;
-            if (slotNum > 36) break;
-            found = true;
-            p.getInventory().setItem(slotNum - 1, plugin.BigBucket(bucketType, amountInBucket, bucketCapacity));
-            break;
-        }
-        if (!found) {
-            p.getWorld().dropItemNaturally(p.getLocation(), plugin.BigBucket(bucketType, amountInBucket, bucketCapacity));
+        BucketUpdater bucketUpdater = new BucketUpdater(plugin);
+        ItemStack bucket = bucketUpdater.createBucket(bucketType, amountInBucket, bucketCapacity);
+        if(p.getInventory().firstEmpty() == -1){
+            p.getWorld().dropItemNaturally(p.getLocation(), bucket);
             sender.sendMessage(plugin.format("&a" + p.getName() + " inventory was full, dropped item on ground."));
+        }else{
+            p.getInventory().addItem(bucket);
         }
         return false;
     }
