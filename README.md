@@ -50,8 +50,8 @@ This plugin does not fully support all vanilla functionality. Due to the way the
 **List of known bugs**
 * Dispenser functionality has currently been disabled due to how buggy it is.
 * Waterlogging a block does not give a block update to the waterlogged block.
-* Picking up an axolotl might cause the axolotl to not render anymore for the player until they relog.
-* Trying to milk a cow with a full BetterBucket maybe cause a visual bug that causes the BetterBucket to appear as a normal bucket of milk (client side rendering bug).
+* Picking up an axolotl might cause the axolotl to not render anymore for the player until they relog (client side rendering bug).
+* Trying to milk a cow with a full BetterBucket might cause a visual bug that causes the BetterBucket to appear as a normal bucket of milk (client side rendering bug).
 * Toggling a BetterBucket milk bucket sometimes causes the player to drink the milk bucket.
 
 # Offical Plugin Discord
